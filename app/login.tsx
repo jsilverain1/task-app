@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+    ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
     StyleSheet,
@@ -9,15 +10,33 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { login } from '../src/services/authService';
+import { saveToken } from '../src/services/tokenService';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const router = useRouter();
 
-  const handleLogin = () => {
-    // We'll connect this to Spring Boot later
-    router.replace('/');
+  const handleLogin = async () => {
+    if (email.trim() === '' || password.trim() === '') {
+      setError('Please enter your email and password');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+      const response = await login({ email, password });
+      await saveToken(response.token);
+      router.replace('/');
+    } catch (err) {
+      setError('Invalid email or password');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -28,6 +47,12 @@ export default function LoginScreen() {
       <View style={styles.inner}>
         <Text style={styles.title}>Welcome Back</Text>
         <Text style={styles.subtitle}>Sign in to your account</Text>
+
+        {error !== '' && (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
 
         <TextInput
           style={styles.input}
@@ -49,15 +74,18 @@ export default function LoginScreen() {
         />
 
         <TouchableOpacity
-          style={styles.button}
+          style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleLogin}
+          disabled={loading}
         >
-          <Text style={styles.buttonText}>Login</Text>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Login</Text>
+          )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => router.push('/register')}
-        >
+        <TouchableOpacity onPress={() => router.push('/register')}>
           <Text style={styles.switchText}>
             Don't have an account?{' '}
             <Text style={styles.switchLink}>Register</Text>
@@ -89,6 +117,17 @@ const styles = StyleSheet.create({
     color: '#aaa',
     marginBottom: 32,
   },
+  errorBox: {
+    backgroundColor: '#ffe5e5',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: '#cc0000',
+    fontSize: 14,
+    textAlign: 'center',
+  },
   input: {
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -109,6 +148,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
     marginTop: 8,
+  },
+  buttonDisabled: {
+    backgroundColor: '#a29de0',
   },
   buttonText: {
     color: '#fff',

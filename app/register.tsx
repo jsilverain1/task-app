@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+    ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
     StyleSheet,
@@ -9,16 +10,44 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { register } from '../src/services/authService';
+import { saveToken } from '../src/services/tokenService';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const router = useRouter();
 
-  const handleRegister = () => {
-    // We'll connect this to Spring Boot later
-    router.replace('/');
+  const handleRegister = async () => {
+    if (email.trim() === '' || password.trim() === '') {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+      const response = await register({ email, password });
+      await saveToken(response.token);
+      router.replace('/');
+    } catch (err) {
+      setError('Registration failed. Please try again');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -29,6 +58,12 @@ export default function RegisterScreen() {
       <View style={styles.inner}>
         <Text style={styles.title}>Create Account</Text>
         <Text style={styles.subtitle}>Start managing your tasks today</Text>
+
+        {error !== '' && (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
 
         <TextInput
           style={styles.input}
@@ -59,15 +94,18 @@ export default function RegisterScreen() {
         />
 
         <TouchableOpacity
-          style={styles.button}
+          style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleRegister}
+          disabled={loading}
         >
-          <Text style={styles.buttonText}>Create Account</Text>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Create Account</Text>
+          )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.switchText}>
             Already have an account?{' '}
             <Text style={styles.switchLink}>Login</Text>
@@ -99,6 +137,17 @@ const styles = StyleSheet.create({
     color: '#aaa',
     marginBottom: 32,
   },
+  errorBox: {
+    backgroundColor: '#ffe5e5',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: '#cc0000',
+    fontSize: 14,
+    textAlign: 'center',
+  },
   input: {
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -119,6 +168,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
     marginTop: 8,
+  },
+  buttonDisabled: {
+    backgroundColor: '#a29de0',
   },
   buttonText: {
     color: '#fff',
