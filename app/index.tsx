@@ -1,4 +1,5 @@
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const MOCK_TASKS = [
   { id: '1', title: 'Buy groceries', completed: false },
@@ -8,19 +9,30 @@ const MOCK_TASKS = [
 ];
 
 export default function HomeScreen() {
+  const [tasks, setTasks] = useState(MOCK_TASKS);
+
+  const toggleTask = (id: string) => {
+    setTasks(tasks.map(task =>
+      task.id === id ? { ...task, completed: !task.completed } : task
+    ));
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.header}>My Tasks</Text>
       <FlatList
-        data={MOCK_TASKS}
+        data={tasks}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={styles.taskCard}>
+          <TouchableOpacity
+            style={styles.taskCard}
+            onPress={() => toggleTask(item.id)}
+          >
             <View style={[styles.checkbox, item.completed && styles.checkboxDone]} />
             <Text style={[styles.taskTitle, item.completed && styles.taskTitleDone]}>
               {item.title}
             </Text>
-          </View>
+          </TouchableOpacity>
         )}
       />
     </View>
