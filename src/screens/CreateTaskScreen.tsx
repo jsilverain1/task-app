@@ -8,11 +8,12 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { UpdateTaskInput } from '../types';
 
 type Props = {
   onAddTask: (title: string) => void;
   onCancel: () => void;
-  taskToEdit?: { id: string; title: string } | null;
+  taskToEdit?: UpdateTaskInput| null;
   onUpdateTask?: (id: string, title: string) => void;
 };
 
