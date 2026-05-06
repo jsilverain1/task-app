@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import CreateTaskScreen from '../src/screens/CreateTaskScreen';
 
 const MOCK_TASKS = [
   { id: '1', title: 'Buy groceries', completed: false },
@@ -10,6 +11,7 @@ const MOCK_TASKS = [
 
 export default function HomeScreen() {
   const [tasks, setTasks] = useState(MOCK_TASKS);
+  const [showCreateTask, setShowCreateTask] = useState(false);
 
   const toggleTask = (id: string) => {
     setTasks(tasks.map(task =>
@@ -17,9 +19,20 @@ export default function HomeScreen() {
     ));
   };
 
+  const addTask = (title: string) => {
+    const newTask = {
+      id: Date.now().toString(),
+      title,
+      completed: false,
+    };
+    setTasks([newTask, ...tasks]);
+    setShowCreateTask(false);
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.header}>My Tasks</Text>
+
       <FlatList
         data={tasks}
         keyExtractor={(item) => item.id}
@@ -35,6 +48,24 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
       />
+
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => setShowCreateTask(true)}
+      >
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
+
+      <Modal
+        visible={showCreateTask}
+        transparent
+        animationType="slide"
+      >
+        <CreateTaskScreen
+          onAddTask={addTask}
+          onCancel={() => setShowCreateTask(false)}
+        />
+      </Modal>
     </View>
   );
 }
@@ -84,5 +115,26 @@ const styles = StyleSheet.create({
   taskTitleDone: {
     textDecorationLine: 'line-through',
     color: '#aaa',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 40,
+    right: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#6c63ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  fabText: {
+    fontSize: 32,
+    color: '#fff',
+    lineHeight: 36,
   },
 });
