@@ -29,6 +29,10 @@ export default function HomeScreen() {
     setShowCreateTask(false);
   };
 
+  const deleteTask = (id: string) => {
+    setTasks(tasks.filter(task => task.id !== id));
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.header}>My Tasks</Text>
@@ -45,6 +49,12 @@ export default function HomeScreen() {
             <Text style={[styles.taskTitle, item.completed && styles.taskTitleDone]}>
               {item.title}
             </Text>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => deleteTask(item.id)}
+            >
+              <Text style={styles.deleteButtonText}>✕</Text>
+            </TouchableOpacity>
           </TouchableOpacity>
         )}
       />
@@ -136,5 +146,14 @@ const styles = StyleSheet.create({
     fontSize: 32,
     color: '#fff',
     lineHeight: 36,
+  },
+  deleteButton: {
+    marginLeft: 'auto',
+    padding: 6,
+  },
+  deleteButtonText: {
+    color: '#ff4d4d',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
