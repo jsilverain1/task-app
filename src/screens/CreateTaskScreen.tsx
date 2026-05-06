@@ -12,14 +12,20 @@ import {
 type Props = {
   onAddTask: (title: string) => void;
   onCancel: () => void;
+  taskToEdit?: { id: string; title: string } | null;
+  onUpdateTask?: (id: string, title: string) => void;
 };
 
-export default function CreateTaskScreen({ onAddTask, onCancel }: Props) {
-  const [title, setTitle] = useState('');
+export default function CreateTaskScreen({ onAddTask, onCancel, taskToEdit, onUpdateTask }: Props) {
+  const [title, setTitle] = useState(taskToEdit ? taskToEdit.title : '');
 
   const handleSubmit = () => {
     if (title.trim() === '') return;
-    onAddTask(title.trim());
+    if (taskToEdit && onUpdateTask) {
+      onUpdateTask(taskToEdit.id, title.trim());
+    } else {
+      onAddTask(title.trim());
+    }
     setTitle('');
   };
 
@@ -29,7 +35,7 @@ export default function CreateTaskScreen({ onAddTask, onCancel }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.card}>
-        <Text style={styles.header}>New Task</Text>
+        <Text style={styles.header}>{taskToEdit ? 'Edit Task' : 'New Task'}</Text>
 
         <TextInput
           style={styles.input}
@@ -44,7 +50,7 @@ export default function CreateTaskScreen({ onAddTask, onCancel }: Props) {
           style={[styles.button, styles.addButton]}
           onPress={handleSubmit}
         >
-          <Text style={styles.addButtonText}>Add Task</Text>
+          <Text style={styles.addButtonText}>{taskToEdit ? 'Update Task' : 'Add Task'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

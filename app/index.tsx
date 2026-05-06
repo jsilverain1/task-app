@@ -12,6 +12,7 @@ const MOCK_TASKS = [
 export default function HomeScreen() {
   const [tasks, setTasks] = useState(MOCK_TASKS);
   const [showCreateTask, setShowCreateTask] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState<{ id: string; title: string } | null>(null);
 
   const toggleTask = (id: string) => {
     setTasks(tasks.map(task =>
@@ -33,6 +34,14 @@ export default function HomeScreen() {
     setTasks(tasks.filter(task => task.id !== id));
   };
 
+  const updateTask = (id: string, title: string) => {
+    setTasks(tasks.map(task =>
+      task.id === id ? { ...task, title } : task
+    ));
+    setTaskToEdit(null);
+    setShowCreateTask(false);
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.header}>My Tasks</Text>
@@ -49,6 +58,15 @@ export default function HomeScreen() {
             <Text style={[styles.taskTitle, item.completed && styles.taskTitleDone]}>
               {item.title}
             </Text>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => {
+                setTaskToEdit({ id: item.id, title: item.title });
+                setShowCreateTask(true);
+              }}
+            >
+              <Text style={styles.editButtonText}>✎</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={() => deleteTask(item.id)}
@@ -67,15 +85,20 @@ export default function HomeScreen() {
       </TouchableOpacity>
 
       <Modal
-        visible={showCreateTask}
-        transparent
-        animationType="slide"
-      >
-        <CreateTaskScreen
-          onAddTask={addTask}
-          onCancel={() => setShowCreateTask(false)}
-        />
-      </Modal>
+  visible={showCreateTask}
+  transparent
+  animationType="slide"
+>
+  <CreateTaskScreen
+    onAddTask={addTask}
+    onCancel={() => {
+      setShowCreateTask(false);
+      setTaskToEdit(null);
+    }}
+    taskToEdit={taskToEdit}
+    onUpdateTask={updateTask}
+  />
+</Modal>
     </View>
   );
 }
@@ -155,5 +178,13 @@ const styles = StyleSheet.create({
     color: '#ff4d4d',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  editButton: {
+    marginLeft: 'auto',
+    padding: 6,
+  },
+  editButtonText: {
+    color: '#6c63ff',
+    fontSize: 18,
   },
 });
