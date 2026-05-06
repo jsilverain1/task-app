@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import CreateTaskScreen from '../src/screens/CreateTaskScreen';
@@ -24,6 +25,7 @@ export default function HomeScreen() {
   const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<{ id: string; title: string } | null>(null);
+  const router = useRouter();
 
   const toggleTask = (id: string) => {
     setTasks(tasks.map(task =>
@@ -56,6 +58,12 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>My Tasks</Text>
+      <TouchableOpacity
+  style={styles.tempLoginButton}
+  onPress={() => router.push('/login')}
+>
+  <Text style={styles.tempLoginButtonText}>Go to Login →</Text>
+</TouchableOpacity>
 
       <FlatList
         data={tasks}
@@ -198,6 +206,13 @@ const styles = StyleSheet.create({
   editButtonText: {
     color: '#6c63ff',
     fontSize: 18,
+  },
+  tempLoginButton: {
+    marginBottom: 16,
+  },
+  tempLoginButtonText: {
+    color: '#6c63ff',
+    fontSize: 14,
   },
 });
 
