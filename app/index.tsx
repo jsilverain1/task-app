@@ -1,16 +1,27 @@
 import { useState } from 'react';
 import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import CreateTaskScreen from '../src/screens/CreateTaskScreen';
+import { Task } from '../src/types';
 
-const MOCK_TASKS = [
+const MOCK_TASKS: Task[] = [
   { id: '1', title: 'Buy groceries', completed: false },
   { id: '2', title: 'Walk the dog', completed: true },
   { id: '3', title: 'Build a task app', completed: false },
   { id: '4', title: 'Learn React Native', completed: true },
 ];
 
+function EmptyState() {
+  return (
+    <View style={emptyStyles.container}>
+      <Text style={emptyStyles.emoji}>📋</Text>
+      <Text style={emptyStyles.title}>No tasks yet</Text>
+      <Text style={emptyStyles.subtitle}>Tap the + button to add your first task</Text>
+    </View>
+  );
+}
+
 export default function HomeScreen() {
-  const [tasks, setTasks] = useState(MOCK_TASKS);
+  const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<{ id: string; title: string } | null>(null);
 
@@ -49,6 +60,7 @@ export default function HomeScreen() {
       <FlatList
         data={tasks}
         keyExtractor={(item) => item.id}
+        ListEmptyComponent={<EmptyState />}
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.taskCard}
@@ -186,5 +198,29 @@ const styles = StyleSheet.create({
   editButtonText: {
     color: '#6c63ff',
     fontSize: 18,
+  },
+});
+
+const emptyStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 80,
+  },
+  emoji: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: '#aaa',
+    textAlign: 'center',
   },
 });
