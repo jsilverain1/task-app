@@ -1,15 +1,10 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import CreateTaskScreen from '../src/screens/CreateTaskScreen';
-import { Task } from '../src/types';
-
-const MOCK_TASKS: Task[] = [
-  { id: '1', title: 'Buy groceries', completed: false },
-  { id: '2', title: 'Walk the dog', completed: true },
-  { id: '3', title: 'Build a task app', completed: false },
-  { id: '4', title: 'Learn React Native', completed: true },
-];
+import * as taskService from '../src/services/taskService';
+import * as tokenService from '../src/services/tokenService';
+import { Task, UpdateTaskInput } from '../src/types';
 
 function EmptyState() {
   return (
@@ -22,48 +17,119 @@ function EmptyState() {
 }
 
 export default function HomeScreen() {
-  const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [showCreateTask, setShowCreateTask] = useState(false);
-  const [taskToEdit, setTaskToEdit] = useState<{ id: string; title: string } | null>(null);
+  const [taskToEdit, setTaskToEdit] = useState<UpdateTaskInput | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const router = useRouter();
 
-  const toggleTask = (id: string) => {
-    setTasks(tasks.map(task =>
-      task.id === id ? { ...task, completed: !task.completed } : task
-    ));
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  const getToken = async () => {
+    const token = await tokenService.getToken();
+    if (!token) {
+      router.replace('/login');
+      return null;
+    }
+    return token;
   };
 
-  const addTask = (title: string) => {
-    const newTask = {
-      id: Date.now().toString(),
-      title,
-      completed: false,
-    };
-    setTasks([newTask, ...tasks]);
-    setShowCreateTask(false);
+  const loadTasks = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const token = await getToken();
+      if (!token) return;
+      const data = await taskService.getTasks({ token });
+      setTasks(data);
+    } catch (err) {
+      setError('Failed to load tasks');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteTask = (id: string) => {
-    setTasks(tasks.filter(task => task.id !== id));
+  const toggleTask = async (id: string, completed: boolean) => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const updated = await taskService.toggleTask(id, !completed, { token });
+      setTasks(tasks.map(task =>
+        task.id === id ? { ...task, completed: updated.completed } : task
+      ));
+    } catch (err) {
+      setError('Failed to update task');
+    }
   };
 
-  const updateTask = (id: string, title: string) => {
-    setTasks(tasks.map(task =>
-      task.id === id ? { ...task, title } : task
-    ));
-    setTaskToEdit(null);
-    setShowCreateTask(false);
+  const addTask = async (title: string) => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const newTask = await taskService.createTask({ title }, { token });
+      setTasks([newTask, ...tasks]);
+      setShowCreateTask(false);
+    } catch (err) {
+      setError('Failed to create task');
+    }
   };
+
+  const deleteTask = async (id: string) => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+      await taskService.deleteTask(id, { token });
+      setTasks(tasks.filter(task => task.id !== id));
+    } catch (err) {
+      setError('Failed to delete task');
+    }
+  };
+
+  const updateTask = async (id: string, title: string) => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const updated = await taskService.updateTask({ id, title }, { token });
+      setTasks(tasks.map(task =>
+        task.id === id ? { ...task, title: updated.title } : task
+      ));
+      setTaskToEdit(null);
+      setShowCreateTask(false);
+    } catch (err) {
+      setError('Failed to update task');
+    }
+  };
+
+  const handleLogout = async () => {
+    await tokenService.deleteToken();
+    router.replace('/login');
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#6c63ff" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>My Tasks</Text>
-      <TouchableOpacity
-  style={styles.tempLoginButton}
-  onPress={() => router.push('/login')}
->
-  <Text style={styles.tempLoginButtonText}>Go to Login →</Text>
-</TouchableOpacity>
+      <View style={styles.headerRow}>
+        <Text style={styles.header}>My Tasks</Text>
+        <TouchableOpacity onPress={handleLogout}>
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
+
+      {error !== '' && (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
 
       <FlatList
         data={tasks}
@@ -72,7 +138,7 @@ export default function HomeScreen() {
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.taskCard}
-            onPress={() => toggleTask(item.id)}
+            onPress={() => toggleTask(item.id, item.completed)}
           >
             <View style={[styles.checkbox, item.completed && styles.checkboxDone]} />
             <Text style={[styles.taskTitle, item.completed && styles.taskTitleDone]}>
@@ -105,20 +171,20 @@ export default function HomeScreen() {
       </TouchableOpacity>
 
       <Modal
-  visible={showCreateTask}
-  transparent
-  animationType="slide"
->
-  <CreateTaskScreen
-    onAddTask={addTask}
-    onCancel={() => {
-      setShowCreateTask(false);
-      setTaskToEdit(null);
-    }}
-    taskToEdit={taskToEdit}
-    onUpdateTask={updateTask}
-  />
-</Modal>
+        visible={showCreateTask}
+        transparent
+        animationType="slide"
+      >
+        <CreateTaskScreen
+          onAddTask={addTask}
+          onCancel={() => {
+            setShowCreateTask(false);
+            setTaskToEdit(null);
+          }}
+          taskToEdit={taskToEdit}
+          onUpdateTask={updateTask}
+        />
+      </Modal>
     </View>
   );
 }
@@ -130,11 +196,37 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 20,
   },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
   header: {
     fontSize: 32,
     fontWeight: 'bold',
-    marginBottom: 24,
     color: '#1a1a1a',
+  },
+  logoutText: {
+    color: '#6c63ff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  errorBox: {
+    backgroundColor: '#ffe5e5',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: '#cc0000',
+    fontSize: 14,
+    textAlign: 'center',
   },
   taskCard: {
     flexDirection: 'row',
@@ -164,10 +256,27 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: 16,
     color: '#1a1a1a',
+    flex: 1,
   },
   taskTitleDone: {
     textDecorationLine: 'line-through',
     color: '#aaa',
+  },
+  editButton: {
+    marginLeft: 'auto',
+    padding: 6,
+  },
+  editButtonText: {
+    color: '#6c63ff',
+    fontSize: 18,
+  },
+  deleteButton: {
+    padding: 6,
+  },
+  deleteButtonText: {
+    color: '#ff4d4d',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   fab: {
     position: 'absolute',
@@ -189,30 +298,6 @@ const styles = StyleSheet.create({
     fontSize: 32,
     color: '#fff',
     lineHeight: 36,
-  },
-  deleteButton: {
-    marginLeft: 'auto',
-    padding: 6,
-  },
-  deleteButtonText: {
-    color: '#ff4d4d',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  editButton: {
-    marginLeft: 'auto',
-    padding: 6,
-  },
-  editButtonText: {
-    color: '#6c63ff',
-    fontSize: 18,
-  },
-  tempLoginButton: {
-    marginBottom: 16,
-  },
-  tempLoginButtonText: {
-    color: '#6c63ff',
-    fontSize: 14,
   },
 });
 
